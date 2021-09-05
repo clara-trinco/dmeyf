@@ -45,7 +45,7 @@ gc(verbose = FALSE)
 library( "data.table")
 library("ggplot2")
 
-carpeta_datasetsOri <-  "../../../datasetsOri/"
+carpeta_datasetsOri <-  "/Users/clara/Documents/00-Posgrado/4_DM_Eco_y_Finanzas/datasetsOri/"  #Establezco el Working Directory"
 septiembre <- "paquete_premium_202009.csv"
 
 ds <- fread(paste0(carpeta_datasetsOri, septiembre,collapse = ""), header=TRUE, showProgress = FALSE)
@@ -57,21 +57,28 @@ Empecemos con un poco de *gimnasia algorítmica:*
 **Preguntas sobre árboles**
 
 -   ¿Es posible encontrar ganancia positiva en un corte sobre una variable?
-
+    CT: No, Como seteamos la funcion de ganancia ganancias todos los que perdiamos los pusimos en 0, y todos los que tienen positivos quedan del otro lado.
+    Si ponemos Baja +2 tenemos muchos negativos y no podemos distribuir en todos tantas bajas 2 para generar ganancia positivas.
 -   ¿Cuál es la cardinalidad de los *intervalos* que dan ganancia?
-
+    CT: Si tenemos muca ganancia positiva, el intervalo donde tengo mas ganancia son muy chicos. Porque tengo pocos baja + 2 pero su ganancia es mucho mejor.
+    
 -   ¿Cómo trata los árboles las variables con datos ausentes?
+    CT: Los maneja primero divide por los que tiene y a os NA los clasifica en la clase que le parece mas relevante (mas entropia, gini) o lo deja en una tercera. 
 
 -   Usualmente se suele cortar las variables en 2 intervalos
-
+    
     -   ¿Se podría cortar en más intervalos?
-
+    CT: si se podria, usamos regularmente arboles binarios pero podriamos definir mas cortes.
+    
     -   ¿Cuál sería el costo?
-
+    CT: mayor complejidad de computos
+    
     -   ¿Se obtendrían mejores resultados?
-
+    CT: posiblemente con arboles mas pequeños.
+    
 -   ¿Cuanto le afecta el """desbalanceo""" de datos al algoritmo?
-
+    CT: El desbalanceo no afecta al arbòl. 
+  
 Debemos ahora convertirnos en **dendrólogos**, estudiar con profundidad nuestros árboles.
 Tomemos un espécimen, construyendo nuestro árbol
 
@@ -95,6 +102,8 @@ Empecemos a analizar su estructura
 arbol
 
 ```
+
+Rpart: no soporta categoricas
 
 Una de las muchas ventajas que tienen los árboles es la simpleza que tienen para ser implementados en fácilmente en sistemas productivos, dado que la reescritura de las reglas de salida es muy simple.
 
@@ -216,6 +225,15 @@ Wow!!
 Estábamos dejando mucho plata sobre la mesa!
 **MUCHA**
 
+QUe pasa si tomo todas las ganancias positivas, porque en esas ramas tenemos 1/40 de relaciones de baja +2, entonces para cada hojas nos da dos cosas:
+el target (y) y una probalidad de 0,025 a los que tienen ese valor seran clasificados como baja mas 2.
+No miramos la clase ni la hoja, sino la proporcion. Si es inferior a 1/40 ganamos plata, por eso buscamos eso. 
+
+Ganancia: define cuanto perderiamos/ganariamos si clasificamos como baja +2.
+
+
+
+
 Veamos cómo clasificó a las hojas que nos dan ganancia positiva:
 
 ```{r}
@@ -324,6 +342,19 @@ Luego esta debería caer hasta el piso, que sería el costo de enviar a todos lo
 hojasordenadas[, gan_acum:=cumsum(ganancia)]
 hojasordenadas
 ```
+********************
+********************
+MATRIZ DE CONFUCION
+********************
+********************
+CT: sobre esto puedo calcular la matriz de confuncion con distintos umbrales: las probabilidaddes de salida (p-evento):
+Por ejemplo con 0,036
+TP: (4+2+3+197)/(238k)
+FN:(0+1+3+5225)/(238k)
+FP: (183+138+49+199)/(238k)
+TN: (12095+10479+13697+193079)/(238K)
+********************
+********************
 
 **Preguntas**
 
@@ -359,6 +390,8 @@ Para la **curva ROC** vamos a necesitar construir una [Matriz de confusión](htt
 ![](img/02_DT_confusion_matrix.png)
 
 Para esto, vamos a sumar las variables `tp`, `tn`, `fp` y `fn`.
+
+
 
 ```{r}
 
@@ -399,6 +432,8 @@ ggplot(hojasordenadas, aes(x=fpr,y=tpr)) +
 
 ```
 
+Cuanto error estoy puedo aceptar cuanto voy a dar positivos. La relacion de cuanto arriesgo con cuanto gano.
+
 **Pregunta**
 
 -   ¿Qué representa la **curva ROC**?
@@ -408,7 +443,7 @@ Como es muy complejo reflejar en palabras una curva, se suele calcular el área 
 Calculamos su área
 
 ```{r}
-# install.packages("geometry")
+install.packages("geometry")
 library(geometry)
 
 x <- c(hojasordenadas$fpr,1)
@@ -417,16 +452,22 @@ polyarea(x, y)
 
 ```
 
+# 0,8056655
+
 Finalmente, luego de un largo trabajo, tenemos el famoso **AUC**.
 Larga vida a las librerías!
 
 **Preguntas**
 
 -   ¿**AUC** es una métrica global o local?
+CT: Global, calcula todos los puntos de corte
+CT: local seria, nos interesa los poquitos casos de BAJA+2. Ganancia es una metrica local por ejemplo.
 
 -   ¿Pueden dos curvas distintas tener un mismo valor de **AUC**?
+CT: si podemos tener mas de una 
 
 Las variables que construimos para llegar a este resultado, son muy útiles para el cálculo de otras *métricas*, como por ejemplo el **nada recomendable de usar**: **Accuracy.** Pero para todos los posibles `puntos de corte` y no sólo para el arbitrario 0.5.
+
 
 ```{r}
 
@@ -453,6 +494,7 @@ ggplot(hojasordenadas, aes(x=p_evento,y=acc)) +
 -   Si hubiéramos elegido nuestro modelo usando el **accuracy**, ¿Cuanta plata hubiera perdido la empresa?
 
 ::: {.tarea}
+
 **TAREA**
 
 Construya la curva correspondiente al F1 Score.
@@ -461,6 +503,28 @@ La métrica F1, es criticado por dar un mismo peso a `recall` y al `precision`.
 Por esto mismo, a alguien se le ocurrió el F-Beta.
 Construya esta última para varios Betas.
 ¿Hay algún Beta que tenga un **punto de corte** similar al nuestro?
+
+
+```{r}
+#F1
+b = 2
+#Precision= TP / (TP + FP)
+#Recall = TP / (TP + FN) 
+
+
+hojasordenadas[, rec:= (( (1-b^2) * ( (tp/(tp+fp)) * (tp/(tp+fn)) ) / ( (b^2 * (tp/(tp+fp)) ) + (tp/(tp+fn)) ) )) ]
+
+ggplot(hojasordenadas, aes(x=p_evento,y=rec)) + 
+  geom_line(lwd=1) +
+  geom_vline(xintercept = 0.025, linetype="dotted")
+
+
+```
+
+
+
+
+
 :::
 
 **Tiempo de un break**
@@ -526,6 +590,7 @@ Realice múltiples muestreos simples y evalué en cada caso si se mantienen las 
 Para evitar los posibles problemas, usaremos muestras estratificadas, estas mantienen las proporciones de las clases entre las muestras.
 
 ```{r}
+library(caret)
 set.seed( semillas[1] )
 inTraining <- caret::createDataPartition(ds$clase_binaria, p = 0.70, list = FALSE)
 train  <-  ds[  inTraining, ]
@@ -644,12 +709,16 @@ Ganancia normalizada de entrenamiento:
 ```{r}
 ganancia(pred_training[,"evento"], train$clase_binaria) / 0.7
 ```
+3766071
+
 
 Ganancia normalizada de prueba
 
 ```{r}
 ganancia(pred_testing[,"evento"], test$clase_binaria) / 0.3
 ```
+[1] 2504167
+
 
 Observamos que el **overfitting** se observa en la ganancia de una forma más pronunciadade la afecta a las **AUCs**.
 
@@ -734,6 +803,8 @@ max(res_100_particions[type == "test" & ganancia > 0, ganancia / 0.3])
 Estamos hablando de mas de 30 veces es la diferencia entre esas dos semillas!!!
 Y algún brillante alumno se habrá dado cuenta que incluso hay ganancias negativas!
 
+
+
 Veamos la dispersión de las métricas como todo un **data scientist**
 
 ```{r}
@@ -764,6 +835,7 @@ Buscamos separar los conjuntos de datos para hacer robustos nuestros modelos y n
 
 Experimente tomando M muestras de tamaño N, para buscar un N que lo deje "confiado".
 Puede utilizar los datos del experimento anterior que ya se encuentran calculados.
+
 :::
 
 La pregunta del **check-in** sobre los números primos de 6 cifras, era para que ustedes tengan sus propias semillas.
@@ -779,6 +851,8 @@ Vamos a buscar cuál es el mejor valor del parámetro `maxdepth` que determina l
 Para poder realizar la búsqueda vamos a valernos de algunas funciones auxiliares:
 
 ```{r}
+
+semillas = c(999979,899971,799949,699863,599803)
 
 metricas <- function(probs, clases, proporcion) {
   
@@ -915,6 +989,7 @@ Repasemos las prácticas más convencionales para la selección de modelos:
 
 **Una pregunta MUCHO más interesante**
 
--   Si entendemos las diferencias entre **test** y **validation** ... cuántas veces podemos usar el conjunto de **test** sin convertirlo en **validation**?
+-   Si entendemos las diferencias entre **test** y **validation** ... cuántas veces podemos usar el conjunto de **test** sin convertirlo en **validation**? 
+CT 1; la validation solo se usa 1 vez. 
 
 ------------------------------------------------------------------------
