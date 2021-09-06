@@ -563,7 +563,7 @@ semillas <- as.vector(unlist(fread("cache/02_DT_semillas.txt")))
 
 ```{r}
 
-semillas
+semillas<- c(999979,899971,799949,699863,599803)
 ```
 
 Ya contando con nuestros generadores, nos toca separar las muestras.
@@ -661,12 +661,20 @@ El de entrenamiento
 ```{r}
 auc_train@y.values
 ```
+0,8071126
+
+Con mis semillas 0,801962
+
 
 y el de test
 
 ```{r}
 auc_test@y.values
 ```
+0,7980072
+con mis semillas
+0,7839983
+
 
 La librería `ROCR` cuenta con muchas métricas.
 Explore la librería y vea si le puede ser útil como otras métricas.
@@ -685,12 +693,18 @@ ganancia <- function(probabilidades, clase) {
 ```
 
 La ganancia de entrenamiento
+Original 2636250
+Mi semilla 2303750
 
 ```{r}
 ganancia(pred_training[,"evento"], train$clase_binaria)
 ```
 
+
+
 Y la ganancia de prueba
+Original 751250
+MI semilla 1057500
 
 ```{r}
 ganancia(pred_testing[,"evento"], test$clase_binaria)
@@ -709,16 +723,16 @@ Ganancia normalizada de entrenamiento:
 ```{r}
 ganancia(pred_training[,"evento"], train$clase_binaria) / 0.7
 ```
-3766071
-
+original 3766071
+mi semilla  3291071
 
 Ganancia normalizada de prueba
 
 ```{r}
 ganancia(pred_testing[,"evento"], test$clase_binaria) / 0.3
 ```
-[1] 2504167
-
+original 2504167
+mi semilla 3525000
 
 Observamos que el **overfitting** se observa en la ganancia de una forma más pronunciadade la afecta a las **AUCs**.
 
@@ -800,6 +814,8 @@ Y la mayor ganancia
 max(res_100_particions[type == "test" & ganancia > 0, ganancia / 0.3])
 ```
 
+4912500
+
 Estamos hablando de mas de 30 veces es la diferencia entre esas dos semillas!!!
 Y algún brillante alumno se habrá dado cuenta que incluso hay ganancias negativas!
 
@@ -851,8 +867,6 @@ Vamos a buscar cuál es el mejor valor del parámetro `maxdepth` que determina l
 Para poder realizar la búsqueda vamos a valernos de algunas funciones auxiliares:
 
 ```{r}
-
-semillas = c(999979,899971,799949,699863,599803)
 
 metricas <- function(probs, clases, proporcion) {
   
@@ -953,9 +967,11 @@ ggplot(resultados_md[type == "test", ], aes(factor(md), auc)) + geom_violin()
 
 ```
 
+
 **Pregunta**
 
 -   ¿Cuál cree que es el mejor valor de `md`?
+md: 12
 
 -   ¿Se mantendrá ese valor si cambiamos el resto de los parámetros?
 
@@ -963,6 +979,13 @@ ggplot(resultados_md[type == "test", ], aes(factor(md), auc)) + geom_violin()
 **TAREA**
 
 Repita el gráfico y la pregunta, pero ahora usando de métrica la ganancia.
+
+```{r}
+
+
+ggplot(resultados_md[type == "test",], aes(x=ganancia)) + geom_histogram()
+```
+
 
 Tome sus 5 semillas y calcule para los mismos parámetros la ganancia y el auc.
 Compare en que parte de la distribución se encuentran sus valores y la media de los mismos.
