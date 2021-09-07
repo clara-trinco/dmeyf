@@ -25,6 +25,7 @@ switch ( Sys.info()[['sysname']],
          Linux   = { directory.root   <-  "~/buckets/b1/crudo/" }  #Entorno Google Cloud
        )
 #defino la carpeta donde trabajo
+setwd("/Users/clara/Documents/00-Posgrado/4_DM_Eco_y_Finanzas/work/E1000_rpart_log.txt")
 setwd( directory.root )
 
 
@@ -33,6 +34,11 @@ kexperimento  <- NA   #NA si se corre la primera vez, un valor concreto si es pa
 kscript           <- "320_rpart_BO"
 karch_generacion  <- "./datasetsOri/paquete_premium_202009.csv"
 karch_aplicacion  <- "./datasetsOri/paquete_premium_202011.csv"
+
+
+
+
+
 kBO_iter    <-  200   #cantidad de iteraciones de la Optimizacion Bayesiana
 
 hs  <- makeParamSet(
@@ -43,7 +49,7 @@ hs  <- makeParamSet(
           forbidden = quote( minbucket > 0.5*minsplit ) )
 
 
-ksemilla_azar  <- 102191
+ksemilla_azar  <- 999979
 #------------------------------------------------------------------------------
 #Funcion que lleva el registro de los experimentos
 
@@ -149,7 +155,7 @@ EstimarGanancia  <- function( x )
    {
      GLOBAL_ganancia_max <<-  ganancia  #asigno la nueva maxima ganancia
     
-     modelo  <- rpart("clase_ternaria ~ .",
+     modelo  <- rpart("clase_ternaria ~ .-ctarjeta_visa_descuentos -mtarjeta_visa_descuentos -ctarjeta_master_descuentos -mtarjeta_master_descuentos -cextraccion_autoservicio -ccajas_otras -catm_trx -matm_other -tmobile_app -cmobile_app_trx -Master_Finiciomora -Master_mconsumosdolares -Master_madelantodolares -Master_cconsumos -Master_cadelantosefectivo -Visa_Finiciomora -Visa_msaldodolares -Visa_mpagado -Visa_mpagominimo",
                       data= dataset,
                       xval= 0,
                       control= x )
@@ -231,6 +237,9 @@ if(!file.exists(kbayesiana)) {
 } else  run  <- mboContinue( kbayesiana )   #retomo en caso que ya exista
 
 
-quit( save="no" )
+#quit( save="no" )
+
+
+
 
 
