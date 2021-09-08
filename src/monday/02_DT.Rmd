@@ -56,9 +56,14 @@ Empecemos con un poco de *gimnasia algorítmica:*
 
 **Preguntas sobre árboles**
 
+<<<<<<< HEAD
 -   ¿Es posible encontrar ganancia positiva en un corte sobre una variable?
     CT: No, Como seteamos la funcion de ganancia ganancias todos los que perdiamos los pusimos en 0, y todos los que tienen positivos quedan del otro lado.
     Si ponemos Baja +2 tenemos muchos negativos y no podemos distribuir en todos tantas bajas 2 para generar ganancia positivas.
+=======
+-   ¿Es posible encontrar ganancia positiva en ambos intervalos en un corte sobre una variable?
+
+>>>>>>> 905b883109ecf1e3a5d8d166c934acb1b34a0214
 -   ¿Cuál es la cardinalidad de los *intervalos* que dan ganancia?
     CT: Si tenemos muca ganancia positiva, el intervalo donde tengo mas ganancia son muy chicos. Porque tengo pocos baja + 2 pero su ganancia es mucho mejor.
     
@@ -286,7 +291,7 @@ hojasbinario <- tablahojas(arbolbinario, ds, "clase_binaria")
 ```
 
 ```{r}
-hojasbinario
+hojasbinario[,]
 ```
 
 Agreguemos una variable de `ganancia` y revisemos rápidamente la ganancia que obtenemos por clase *evento*
@@ -472,6 +477,11 @@ Las variables que construimos para llegar a este resultado, son muy útiles para
 ```{r}
 
 hojasordenadas[, acc:= ((tp + tn)/(tp+tn+fp+fn))]
+
+```
+
+```{r}
+hojasordenadas[,]
 
 ```
 
@@ -721,7 +731,7 @@ Como las cantidades de los conjuntos de datos son distintas, igual van a ser sus
 Ganancia normalizada de entrenamiento:
 
 ```{r}
-ganancia(pred_training[,"evento"], train$clase_binaria) / 0.7
+ganancia(pred_training[,"evento"], train$clase_binaria)/ 0.7 
 ```
 original 3766071
 mi semilla  3291071
@@ -734,7 +744,7 @@ ganancia(pred_testing[,"evento"], test$clase_binaria) / 0.3
 original 2504167
 mi semilla 3525000
 
-Observamos que el **overfitting** se observa en la ganancia de una forma más pronunciadade la afecta a las **AUCs**.
+Observamos que el **overfitting** se observa en la ganancia de una forma más pronunciada afecta a las **AUCs**.
 
 Pero antes de ver como podemos mejorar el **overfitting**, veamos otro fenómeno interesante.
 Modelemos, pero probando distintas semillas.
@@ -963,7 +973,7 @@ resultados_md <- fread("cache/02_DT_md_100.csv")
 Y simplemente visualizamos con una orquesta de violines los distintos valores de `md` y la distribución producto de las 100 semillas para cada uno.
 
 ```{r}
-ggplot(resultados_md[type == "test", ], aes(factor(md), auc)) + geom_violin()
+ggplot(resultados_md[type == "test", ], aes(factor(md), ganancia / 0.3)) + geom_violin()
 
 ```
 
