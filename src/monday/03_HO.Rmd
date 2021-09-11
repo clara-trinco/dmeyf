@@ -137,7 +137,7 @@ Cargamos los datos
 library( "data.table")
 library("ggplot2")
 
-carpeta_datasetsOri <-  "../../../datasetsOri/"
+carpeta_datasetsOri <-   "/Users/clara/Documents/00-Posgrado/4_DM_Eco_y_Finanzas/datasetsOri/"  #Establezco el Working Directory"
 septiembre <- "paquete_premium_202009.csv"
 
 ds <- fread(paste0(carpeta_datasetsOri, septiembre,collapse = ""), header=TRUE, showProgress = FALSE)
@@ -148,6 +148,7 @@ ds[, c("clase_ternaria") := NULL]
 
 # Solo usaremos 5
 semillas <- as.vector(unlist(fread("cache/02_DT_semillas.txt")))[1:5]
+semillas_2 <- c(999979,899971,799949,699863,599803)
 ```
 
 Para mayor comodidad, armamos hacemos de algunas funciones.
@@ -225,9 +226,9 @@ print(r2)
 Construimos una última función auxiliar para ejecutar todas las semillas a la vez
 
 ```{r}
-experimento_rpart <- function (ds, semillas, cp =  0, ms = 20, mb = 1, md = 30) {
+experimento_rpart <- function (ds, semillas_2, cp =  0, ms = 20, mb = 1, md = 30) {
   auc <- c()
-  for (s in semillas) {
+  for (s in semillas_2) {
     set.seed(s)
     inTraining <- caret::createDataPartition(ds$clase_binaria, p = 0.70, list = FALSE)
     train  <-  ds[  inTraining, ]
@@ -247,7 +248,7 @@ experimento_rpart(ds, semillas)
 Haremos 25 experimentos aleatorios, armamos las muestras de acuerdo a como son las entradas de nuestro experimento.
 
 ```{r}
-set.seed(semillas[1])
+set.seed(semillas_2[1])
 S <- optimumLHS(25,2)
 
 # la primera columna es para el maxdepth, y la segunda para el minslip
@@ -262,7 +263,7 @@ Y ejecutamos nuestro experimento
 
 resultados_random_search <- data.table()
 for (e in 1:25) {
-  r <- experimento_rpart(ds, semillas, ms = S[e,2], md = S[e,1])
+  r <- experimento_rpart(ds, semillas_2, ms = S[e,2], md = S[e,1])
   resultados_random_search <- rbindlist( list(resultados_random_search,
                   data.table(md = S[e,1], ms= S[e,2],r)
   ))
@@ -286,6 +287,8 @@ resultados_random_search
 Y llevemos a un simple visualización (filtrando los casos más bajos).
 
 ```{r}
+
+library(ggplot2)
 ggplot(resultados_random_search[mean_auc > 0.80,], aes(x=md,y=ms,color=sd_auc)) +
     scale_color_gradient(  low = "blue", high = "red") +
     geom_point(aes(size = mean_auc))
@@ -363,6 +366,7 @@ design = generateDesign(6L, getParamSet(obj.fun), fun = lhs::maximinLHS)
 Y simplemente ejecutamos nuestro experimento con todos los parámetros configurados
 
 ```{r}
+library(rgenoud)
 run = exampleRun(obj.fun, design = design, learner = lrn,
                  control = ctrl, points.per.dim = 100, show.info = TRUE)
 ```
@@ -453,7 +457,7 @@ Cómo **BO** busca mínimo, devolveremos nuestra `auc` negativo. Configuramos nu
 
 obj.fun = makeSingleObjectiveFunction(
   name = "max depth",
-  fn = function(x) - experimento_rpart(ds, semillas, md= as.integer(x))$mean_auc,
+  fn = function(x) - experimento_rpart(ds, semillas_2, md= as.integer(x))$mean_auc,
   par.set = makeNumericParamSet("maxdepth", lower=4L , upper=  30L),
   has.simple.signature = FALSE
 )
@@ -503,7 +507,7 @@ Busquemos el óptimo de las dos variables conjuntas que estuvimos viendo, a ver 
 
 
 obj_fun <- function(x) { 
-  experimento_rpart(ds, semillas, md= x$maxdepth, ms= x$minsplit)$mean_auc
+  experimento_rpart(ds, semillas_2, md= x$maxdepth, ms= x$minsplit)$mean_auc
 }
 
 obj.fun = makeSingleObjectiveFunction(

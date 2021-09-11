@@ -8,7 +8,9 @@ require("data.table")
 require("rpart")
 
 #Aqui se debe poner la carpeta de la computadora local
-setwd("~/buckets/b1/crudoB/")  #Establezco el Working Directory
+setwd("/Users/clara/Documents/00-Posgrado/4_DM_Eco_y_Finanzas/")  #Establezco el Working Directory
+
+
 
 #cargo los datos donde entreno
 dtrain  <- fread("./datasetsOri/paquete_premium_202009.csv")
@@ -18,11 +20,11 @@ dapply  <- fread("./datasetsOri/paquete_premium_202011.csv")
 
 
 #Establezco cuales son los campos que puedo usar para la prediccion
-campos_buenos  <- setdiff(  colnames(dtrain) ,  c("clase_ternaria") )
+campos_buenos  <- setdiff(  colnames(dtrain) ,  c("clase_ternaria", "internet", "tmobile_app", "Master_Finiciomora", "cmobile_app_trx") )
 
-parametros  <-  list( "cp"=-1, "minsplit"=900,  "minbucket"=440, "maxdepth"=5 )
+parametros  <-  list( "cp"=-1, "minsplit"=1686,  "minbucket"=434, "maxdepth"=10 )
 
-num_trees         <-  10    #voy a generar 10 arboles
+num_trees         <-  500    #voy a generar 10 arboles
 feature_fraction  <-   0.5  #entreno cada arbol con solo 50% de las variables variables
 
 set.seed(102191) #Establezco la semilla aleatoria
@@ -52,6 +54,8 @@ for(  i in  1:num_trees ) #genero  num_trees arboles
   prediccion  <- predict( modelo, dapply , type = "prob")
 
   #voy acumulando la probabilidad
+  
+  
   probabilidad_ensemble  <- probabilidad_ensemble +  prediccion[, "BAJA+2"]
 }
 
