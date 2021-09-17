@@ -19,7 +19,7 @@ require("mlrMBO")
 
 
 #defino la carpeta donde trabajo
-setwd( "~/buckets/b1/crudoB/"  )
+setwd("/Users/clara/Documents/00-Posgrado/4_DM_Eco_y_Finanzas/") 
 
 
 kexperimento  <- NA   #NA si se corre la primera vez, un valor concreto si es para continuar procesando
@@ -39,7 +39,7 @@ hs  <- makeParamSet(
           forbidden = quote( minbucket > 0.5*minsplit ) )
 
 
-ksemilla_azar  <- 102191  #Aqui poner la propia semilla
+ksemilla_azar  <- 999979  #Aqui poner la propia semilla
 #------------------------------------------------------------------------------
 #Funcion que lleva el registro de los experimentos
 
@@ -158,7 +158,7 @@ ArbolesAzarosos_CrossValidation  <- function( data, param, pcampos_buenos, qfold
 
 EstimarGanancia_ArbolesAzarosos  <- function( x )
 {
-   campos_buenos  <- setdiff(  colnames(dataset) ,  c("clase_ternaria") )
+   campos_buenos  <- setdiff(  colnames(dataset) ,  c("clase_ternaria", "internet", "tmobile_app", "Master_Finiciomora", "cmobile_app_trx") )
    
    GLOBAL_iteracion  <<-  GLOBAL_iteracion + 1
 
