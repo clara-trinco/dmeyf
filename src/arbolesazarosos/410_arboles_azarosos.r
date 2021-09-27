@@ -24,7 +24,7 @@ campos_buenos  <- setdiff(  colnames(dtrain) ,  c("clase_ternaria", "internet", 
 
 parametros  <-  list( "cp"=-1, "minsplit"=1686,  "minbucket"=434, "maxdepth"=10 )
 
-num_trees         <-  500    #voy a generar 10 arboles
+num_trees         <-  10    #voy a generar 10 arboles
 feature_fraction  <-   0.5  #entreno cada arbol con solo 50% de las variables variables
 
 set.seed(102191) #Establezco la semilla aleatoria

@@ -13,12 +13,13 @@ require("ranger")
 require("randomForest")  #solo se usa para imputar nulos
 
 #Aqui se debe poner la carpeta de la computadora local
-setwd("~/buckets/b1/crudoB/")  #Establezco el Working Directory
+setwd("/Users/clara/Documents/00-Posgrado/4_DM_Eco_y_Finanzas/") #Establezco el Working Directory
 
 #cargo los datos donde entreno
 dtrain  <- fread("./datasetsOri/paquete_premium_202009.csv", stringsAsFactors= TRUE)
 
 dtrain[ , clase_binaria := as.factor(ifelse( clase_ternaria=="BAJA+2", "POS", "NEG" )) ]
+dtrain[,.N,by=clase_binaria]
 dtrain[ , clase_ternaria := NULL ]  #elimino la clase_ternaria, ya no la necesito
 
 #imputo los nulos, ya que ranger no acepta nulos
@@ -27,6 +28,7 @@ dtrain  <- na.roughfix( dtrain )
 
 #cargo los datos donde aplico el modelo
 dapply  <- fread("./datasetsOri/paquete_premium_202011.csv", stringsAsFactors= TRUE)
+dapply$clase_binaria <-0
 dapply[ , clase_ternaria := NULL ]  #Elimino esta columna que esta toda en NA
 dapply  <- na.roughfix( dapply )
 
@@ -37,7 +39,7 @@ param  <- list( "num.trees"=      500,  #cantidad de arboles
                 "max.depth"=        0   # 0 significa profundidad infinita
               )
 
-set.seed(102191) #Establezco la semilla aleatoria
+set.seed(999979) #Establezco la semilla aleatoria
 
 modelo  <- ranger( formula= "clase_binaria ~ .",
                    data=  dtrain, 

@@ -93,8 +93,9 @@ particionar  <- function( data, division, agrupa="", campo="fold", start=1, seed
   data[ , (campo) :=  sample( rep( bloque, ceiling(.N/length(bloque))) )[1:.N],
            by= agrupa ]
 }
-#------------------------------------------------------------------------------
 
+
+#------------------------------------------------------------------------------
 ArbolesAzarosos_Simple  <- function( fold_test, data, param, pcampos_buenos )
 {
   #genero el modelo
@@ -145,7 +146,7 @@ ArbolesAzarosos_CrossValidation  <- function( data, param, pcampos_buenos, qfold
                           seq(qfolds), # 1 2 3 4 5  
                           MoreArgs= list( data, param, pcampos_buenos), 
                           SIMPLIFY= FALSE,
-                          mc.cores= 5 )   #se puede subir a 5 si posee Linux o Mac OS
+                          mc.cores= 1 )   #se puede subir a 5 si posee Linux o Mac OS
                                           #Se se usa Windows, obligatoriamente debe ser  1
 
   data[ , fold := NULL ]

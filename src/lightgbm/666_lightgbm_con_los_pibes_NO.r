@@ -20,7 +20,7 @@ dataset[ , clase01:= ifelse( clase_ternaria=="CONTINUA", 0, 1 ) ]
 
 #Quito el Data Drifting de  "ccajas_transacciones"  "Master_mpagominimo"
 campos_buenos  <- setdiff( colnames(dataset),
-                           c("clase_ternaria", "clase01", "ccajas_transacciones", "Master_mpagominimo" ) )
+                           c("clase_ternaria", "clase01", "ccajas_transacciones", "Master_mpagominimo" , "internet","tmobile_app", "Master_Finiciomora", "cmobile_app_trx") )
 
 #genero el formato requerido por LightGBM
 dtrain  <- lgb.Dataset( data=  data.matrix(  dataset[ , campos_buenos, with=FALSE]),
@@ -31,9 +31,9 @@ dtrain  <- lgb.Dataset( data=  data.matrix(  dataset[ , campos_buenos, with=FALS
 #Dadme un punto de apoyo y movere el mundo, Arquimedes
 modelo  <- lightgbm( data= dtrain,
                      params= list( objective= "binary",
-                                   max_bin= 15,
+                                   max_bin= 15, #15
                                    min_data_in_leaf= 4000,
-                                   learning_rate= 0.05,
+                                   learning_rate= 0.06, #0.05
                                    num_iterations=100)  )
 
 
@@ -45,9 +45,9 @@ prediccion  <- predict( modelo,  data.matrix( dapply[  , campos_buenos, with=FAL
 
 #la probabilidad de corte ya no es 0.025,  sino que 0.031
 entrega  <- as.data.table( list( "numero_de_cliente"= dapply[  , numero_de_cliente],
-                                 "Predicted"= as.numeric(prediccion > 0.031) ) ) #genero la salida
+                                 "Predicted"= as.numeric(prediccion > 0.031) ) ) #genero la salida 0.031
 
 #genero el archivo para Kaggle
 fwrite( entrega, 
-        file= "./kaggle/lightgbm_con_los_pibes_NO.csv",
+        file= "./kaggle/lightgbm_con_los_pibes_no.csv",
         sep=  "," )

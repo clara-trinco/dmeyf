@@ -20,7 +20,7 @@ require("mlrMBO")
 
 
 #defino la carpeta donde trabajo
-setwd( "~/buckets/b1/crudoB/"  )
+setwd("/Users/clara/Documents/00-Posgrado/4_DM_Eco_y_Finanzas/") #Establezco el Working Directory
 
 
 kexperimento  <- NA   #NA si se corre la primera vez, un valor concreto si es para continuar procesando
@@ -219,6 +219,7 @@ dataset  <- na.roughfix( dataset )
 
 #cargo el dataset donde voy a aplicar el modelo, que NO tiene clase
 dapply   <- fread(karch_aplicacion, stringsAsFactors= TRUE)   #donde aplico el modelo
+dapply$clase_binaria <-0
 dapply[ , clase_ternaria := NULL ]  #Elimino esta columna que esta toda en NA
 dapply  <- na.roughfix( dapply )
 
