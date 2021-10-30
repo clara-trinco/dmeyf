@@ -32,21 +32,21 @@ require("mlrMBO")
 
 #para poder usarlo en la PC y en la nube sin tener que cambiar la ruta
 #cambiar aqui las rutas en su maquina
-switch ( Sys.info()[['sysname']],
-         Windows = { directory.root  <-  "M:\\" },   #Windows
-         Darwin  = { directory.root  <-  "~/dm/" },  #Apple MAC
-         Linux   = { directory.root  <-  "~/buckets/b1/" } #Google Cloud
-       )
+#switch ( Sys.info()[['sysname']],
+#         Windows = { directory.root  <-  "M:\\" },   #Windows
+#         Darwin  = { directory.root  <-  "~/dm/" },  #Apple MAC
+#         Linux   = { directory.root  <-  "~/buckets/b1/" } #Google Cloud
+#       )
 #defino la carpeta donde trabajo
-setwd( directory.root )
-
+#setwd( directory.root )
+setwd("/Users/clara/Documents/00-Posgrado/4_DM_Eco_y_Finanzas/")
 
 
 kexperimento  <- NA   #NA si se corre la primera vez, un valor concreto si es para continuar procesando
 
 kscript         <- "823_epic"
 
-karch_dataset    <- "./datasets/dataset_epic_simple_v007.csv.gz"   #este dataset se genero en el script 812_dataset_epic.r
+karch_dataset    <- "./datasets/dataset_epic_simple_v009.csv.gz"   #este dataset se genero en el script 812_dataset_epic.r
 
 kapply_mes       <- c(202011)  #El mes donde debo aplicar el modelo
 
@@ -61,19 +61,38 @@ kgen_mes_hasta    <- 202009  #Obviamente, solo puedo entrenar hasta 202011
 kgen_mes_desde    <- 202009
 
 
-kBO_iter    <-  150   #cantidad de iteraciones de la Optimizacion Bayesiana
+kBO_iter    <-  300   #cantidad de iteraciones de la Optimizacion Bayesiana
 
 #Aqui se cargan los hiperparametros
+#hs <- makeParamSet( 
+#         makeNumericParam("learning_rate",    lower=    0.02 , upper=    0.1),
+#         makeNumericParam("feature_fraction", lower=    0.1  , upper=    1.0),
+#         makeIntegerParam("min_data_in_leaf", lower=  100L   , upper= 8000L),
+#         makeIntegerParam("num_leaves",       lower=    8L   , upper= 1024L)
+#        )
+
 hs <- makeParamSet( 
-         makeNumericParam("learning_rate",    lower=    0.02 , upper=    0.1),
-         makeNumericParam("feature_fraction", lower=    0.1  , upper=    1.0),
-         makeIntegerParam("min_data_in_leaf", lower=  100L   , upper= 8000L),
-         makeIntegerParam("num_leaves",       lower=    8L   , upper= 1024L)
-        )
+  makeNumericParam("learning_rate",      lower= 0.01 , upper=    0.1), #(modifique el 0,1 a 0,05 en upper)#0,013 - 0,016
+  makeNumericParam("feature_fraction",   lower= 0.1  , upper=    1.0), #(modifique el 0,2 a 0,1 en lower) #0,9999 en economista no lo pone default 1
+  makeIntegerParam("min_data_in_leaf",   lower= 4000L    , upper= 8000L), # 100 - 2000
+  makeIntegerParam("num_leaves",         lower=16L   , upper= 1024L), # 20 en los pibes no estaba default 31
+  makeNumericParam("prob_corte",         lower= 0.020, upper=    0.055),
+  #AGREGADOS para que corra parametros antes en param_basicos
+  makeNumericParam("min_gain_to_split",  lower= 0, upper=    1),
+  makeNumericParam("lambda_l1",          lower= 0, upper=  200  ), # 0-19 - #Die (e/0-100) 0-17 (e/0-20) 0-5
+  makeNumericParam("lambda_l2",          lower= 0, upper=    200), #90-174        #Die  (e/30-150) 60-140 
+  makeIntegerParam("max_depth",          lower= 1L, upper=  8000L),
+  makeIntegerParam("max_bin",            lower= 2L, upper=    40L), #5-15-31
+  # AGREGADOS por leer articulo
+  makeNumericParam("bagging_fraction", lower= 0.0001, upper=    1) ,# 0,5-1 default 
+  makeIntegerParam("bagging_freq", lower= 0, upper=  100) # default 0 moverlo a parametro fijo a un numero bajo
+)
 
-campos_malos  <- c()   #aqui se deben cargar todos los campos culpables del Data Drifting
 
-ksemilla_azar  <- 102191  #Aqui poner la propia semilla
+#campos_malos  <- c()   #aqui se deben cargar todos los campos culpables del Data Drifting
+campos_malos  <- c("internet","ctarjeta_visa_descuentos" , "mtarjeta_visa_descuentos" ,"ccajas_transacciones", "ctarjeta_master_descuentos" , "mtarjeta_master_descuentos" , "cextraccion_autoservicio" , "ccajas_otras" , "catm_trx" , "matm_other" , "tmobile_app" , "cmobile_app_trx" , "Master_Finiciomora" , "Master_mconsumosdolares" , "Master_madelantodolares" , "Master_cconsumos" , "Master_cadelantosefectivo" , "Visa_Finiciomora" , "Visa_msaldodolares" , "Visa_mpagado" , "Visa_mpagominimo")
+
+ksemilla_azar  <- 799949 #Aqui poner la propia semilla
 #------------------------------------------------------------------------------
 #Funcion que lleva el registro de los experimentos
 
@@ -294,16 +313,25 @@ EstimarGanancia_lightgbm  <- function( x )
                           boost_from_average= TRUE,
                           feature_pre_filter= FALSE,
                           verbosity= -100,
-                          seed= 999983,
-                          max_depth=  -1,         # -1 significa no limitar,  por ahora lo dejo fijo
-                          min_gain_to_split= 0.0, #por ahora, lo dejo fijo
-                          lambda_l1= 0.0,         #por ahora, lo dejo fijo
-                          lambda_l2= 0.0,         #por ahora, lo dejo fijo
-                          max_bin= 31,            #por ahora, lo dejo fijo
-                          num_iterations= 9999,   #un numero muy grande, lo limita early_stopping_rounds
+                          seed= 999983,  #999983
+                          #max_depth=  -1,         # -1 significa no limitar,  por ahora lo dejo fijo
+                          #min_gain_to_split= 0.0, #por ahora, lo dejo fijo
+                          #lambda_l1= 0.0,         #por ahora, lo dejo fijo
+                          #lambda_l2= 0.0,         #por ahora, lo dejo fijo
+                          #max_bin= 31,            #por ahora, lo dejo fijo
+                          num_iterations= 9999,   #un numero muy grande, lo limita early_stopping_rounds #430-499
                           force_row_wise= TRUE    #para que los alumnos no se atemoricen con tantos warning
                         )
-
+  #dejo los datos en el formato que necesita LightGBM
+  #uso el weight como un truco ESPANTOSO para saber la clase real
+  dtrain  <- lgb.Dataset( data=    data.matrix(  dataset[ entrenamiento==1 , campos_buenos, with=FALSE]),
+                          label=   dataset[ entrenamiento==1, clase01],
+                          weight=  dataset[ entrenamiento==1, ifelse(clase_ternaria=="CONTINUA", 1/ktrain_subsampling,
+                                                                     ifelse( clase_ternaria=="BAJA+2", 1, 1.0000001))] ,
+                          free_raw_data= TRUE
+  )
+  
+  
   #el parametro discolo, que depende de otro
   param_variable  <- list(  early_stopping_rounds= as.integer(50 + 1/x$learning_rate) )
 
@@ -426,15 +454,6 @@ dataset[    foto_mes>= ktrain_mes_desde  &
 campos_buenos  <- setdiff( colnames(dataset), 
                            c("clase_ternaria","clase01", "generacion_final", "entrenamiento", "fold", campos_malos) )
 
-#dejo los datos en el formato que necesita LightGBM
-#uso el weight como un truco ESPANTOSO para saber la clase real
-dtrain  <- lgb.Dataset( data=    data.matrix(  dataset[ entrenamiento==1 , campos_buenos, with=FALSE]),
-                        label=   dataset[ entrenamiento==1, clase01],
-                        weight=  dataset[ entrenamiento==1, ifelse(clase_ternaria=="CONTINUA", 1/ktrain_subsampling,
-                                                                   ifelse( clase_ternaria=="BAJA+2", 1, 1.0000001))] ,
-                        free_raw_data= TRUE
-                      )
-
 
 #Aqui comienza la configuracion de la Bayesian Optimization
 
@@ -469,7 +488,7 @@ if(!file.exists(kbayesiana)) {
 
 
 #apagado de la maquina virtual, pero NO se borra
-system( "sleep 10  &&  sudo shutdown -h now", wait=FALSE)
+#system( "sleep 10  &&  sudo shutdown -h now", wait=FALSE)
 
 #suicidio,  elimina la maquina virtual directamente
 #system( "sleep 10  && 
@@ -479,6 +498,6 @@ system( "sleep 10  &&  sudo shutdown -h now", wait=FALSE)
 #        wait=FALSE )
 
 
-quit( save="no" )
+#quit( save="no" )
 
 

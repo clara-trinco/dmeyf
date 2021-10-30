@@ -1,4 +1,3 @@
-#source("~/buckets/b1/crudoB/R/812_dataset_epic.r")
 #Necesita para correr en Google Cloud
 #256 GB de memoria RAM
 #300 GB de espacio en el disco local
@@ -18,20 +17,20 @@ require("lightgbm")
 
 
 #defino la carpeta donde trabajo
-#directory.root  <-  "~/buckets/b1/"  #Google Cloud
-#setwd( directory.root )
-setwd("/Users/clara/Documents/00-Posgrado/4_DM_Eco_y_Finanzas/")
+directory.root  <-  "~/buckets/b1/"  #Google Cloud
+setwd( directory.root )
+
 palancas  <- list()  #variable con las palancas para activar/desactivar
 
-palancas$version  <- "v008"   #Muy importante, ir cambiando la version
+palancas$version  <- "v951"   #Muy importante, ir cambiando la version
 
-palancas$variablesdrift  <- c("ccajas_transacciones")   #aqui van las columnas que se quieren eliminar
+palancas$variablesdrift  <- c("ccajas_transacciones")  #aqui van las columnas que se quieren eliminar
 
 palancas$corregir <-  TRUE    # TRUE o FALSE
 
-palancas$nuevasvars <-  TRUE  #si quiero hacer Feature Engineering manual
+palancas$nuevasvars <-  FALSE  #si quiero hacer Feature Engineering manual
 
-palancas$dummiesNA  <-  FALSE #Idea de Santiago Dellachiesa de UAustral
+palancas$dummiesNA  <-  FALSE #La idea de Santiago Dellachiesa
 
 palancas$lag1   <- FALSE    #lag de orden 1
 palancas$delta1 <- FALSE    # campo -  lag de orden 1 
@@ -55,7 +54,11 @@ palancas$minimo6  <- FALSE
 palancas$maximo3  <- FALSE  #maximo de los ultimos 3 meses
 palancas$maximo6  <- FALSE
 
+palancas$ratiomax3   <- FALSE   #La idea de Daiana Sparta
+palancas$ratiomean6  <- FALSE   #Un derivado de la idea de Daiana Sparta
+
 palancas$tendencia6  <- FALSE    #Great power comes with great responsability
+
 
 palancas$canaritosimportancia  <- FALSE  #si me quedo solo con lo mas importante de canaritosimportancia
 
@@ -254,7 +257,7 @@ AgregarVariables  <- function( dataset )
   dataset[ , mv_mconsumototal        := rowSums( cbind( Master_mconsumototal,  Visa_mconsumototal) , na.rm=TRUE ) ]
   dataset[ , mv_cconsumos            := rowSums( cbind( Master_cconsumos,  Visa_cconsumos) , na.rm=TRUE ) ]
   dataset[ , mv_cadelantosefectivo   := rowSums( cbind( Master_cadelantosefectivo,  Visa_cadelantosefectivo) , na.rm=TRUE ) ]
-  #dataset[ , mv_mpagominimo          := rowSums( cbind( Master_mpagominimo,  Visa_mpagominimo) , na.rm=TRUE ) ]
+  dataset[ , mv_mpagominimo          := rowSums( cbind( Master_mpagominimo,  Visa_mpagominimo) , na.rm=TRUE ) ]
 
   #a partir de aqui juego con la suma de Mastercard y Visa
   dataset[ , mvr_Master_mlimitecompra:= Master_mlimitecompra / mv_mlimitecompra ]
@@ -272,7 +275,7 @@ AgregarVariables  <- function( dataset )
   dataset[ , mvr_mpagospesos         := mv_mpagospesos / mv_mlimitecompra ]
   dataset[ , mvr_mpagosdolares       := mv_mpagosdolares / mv_mlimitecompra ]
   dataset[ , mvr_mconsumototal       := mv_mconsumototal  / mv_mlimitecompra ]
-  #dataset[ , mvr_mpagominimo         := mv_mpagominimo  / mv_mlimitecompra ]
+  dataset[ , mvr_mpagominimo         := mv_mpagominimo  / mv_mlimitecompra ]
 
   #Aqui debe usted agregar sus propias nuevas variables
   
@@ -381,6 +384,7 @@ AgregarVariables  <- function( dataset )
   dataset[ , cr_ing_total_ctarjeta_visa_transacciones:= cr_ing_total * ctarjeta_visa_transacciones ]
   
   
+
   #valvula de seguridad para evitar valores infinitos
   #paso los infinitos a NULOS
   infinitos      <- lapply(names(dataset),function(.name) dataset[ , sum(is.infinite(get(.name)))])
@@ -469,6 +473,32 @@ Maximos  <- function( dataset, cols, nhistoria )
   sufijo  <- paste0( "_max", nhistoria )
 
   dataset[ , paste0( cols, sufijo) := frollapply(x=.SD, FUN="max", n=nhistoria, na.rm=TRUE, align="right"), 
+             by= numero_de_cliente, 
+             .SDcols= cols]
+
+  ReportarCampos( dataset )
+}
+#------------------------------------------------------------------------------
+#calcula  el ratio entre el valor actual y el maximo de los ultimos nhistoria meses
+
+RatioMax  <- function( dataset, cols, nhistoria )
+{
+  sufijo  <- paste0( "_rmax", nhistoria )
+
+  dataset[ , paste0( cols, sufijo) := .SD/ frollapply(x=.SD, FUN="max", n=nhistoria, na.rm=TRUE, align="right"), 
+             by= numero_de_cliente, 
+             .SDcols= cols]
+
+  ReportarCampos( dataset )
+}
+#------------------------------------------------------------------------------
+#calcula  el ratio entre el valor actual y el promedio de los ultimos nhistoria meses
+
+RatioMean  <- function( dataset, cols, nhistoria )
+{
+  sufijo  <- paste0( "_rmean", nhistoria )
+
+  dataset[ , paste0( cols, sufijo) := .SD/frollapply(x=.SD, FUN="mean", n=nhistoria, na.rm=TRUE, align="right"), 
              by= numero_de_cliente, 
              .SDcols= cols]
 
@@ -577,7 +607,7 @@ Tendencia  <- function( dataset, cols )
 #------------------------------------------------------------------------------
 VPOS_CORTE  <- c()
 
-fganancia_lgbm_meseta  <- function(probs, datos) ### CONSULTAR
+fganancia_lgbm_meseta  <- function(probs, datos) 
 {
   vlabels  <- getinfo(datos, "label")
   vpesos   <- getinfo(datos, "weight")
@@ -615,7 +645,7 @@ CanaritosImportancia  <- function( dataset )
   azar  <- runif( nrow(dataset) )
   entrenamiento  <-  dataset[ , foto_mes>= 202001 &  foto_mes<= 202010 &  foto_mes!=202006 & ( clase01==1 | azar < 0.10 ) ]
 
-  dtrain  <- lgb.Dataset( data=    data.matrix(  dataset[ entrenamiento==TRUE, campos_buenos, with=FALSE]),## filtro sobre columnas sacando 26 columnas (campos malos, mas clase01, clase ternaria, fold, entrenamiento, fotomes)
+  dtrain  <- lgb.Dataset( data=    data.matrix(  dataset[ entrenamiento==TRUE, campos_buenos, with=FALSE]),
                           label=   dataset[ entrenamiento==TRUE, clase01],
                           weight=  dataset[ entrenamiento==TRUE, ifelse(clase_ternaria=="BAJA+2", 1.0000001, 1.0)] )
 
@@ -651,9 +681,9 @@ CanaritosImportancia  <- function( dataset )
                         verbose= -100 )
 
   tb_importancia  <- lgb.importance( model= modelo )
-  tb_importancia[  , pos := .I ] # agrega columna con numero de fila (ordena importancia)
+  tb_importancia[  , pos := .I ]
   
-  fwrite( tb_importancia, file="./work/impo.txt", sep="\t" )
+  fwrite( tb_importancia, file="./work/impo.txt",  , sep="\t" )
   
   umbral  <- tb_importancia[ Feature %like% "canarito", median(pos) - sd(pos) ]
   col_inutiles  <- tb_importancia[ pos >= umbral | Feature %like% "canarito",  Feature ]
@@ -673,12 +703,7 @@ CanaritosImportancia  <- function( dataset )
 correr_todo  <- function( palancas )
 {
   #cargo el dataset ORIGINAL
-  dataset1  <- fread( "./datasetsOri/paquete_premium_202009.csv")
-  dataset2  <- fread( "./datasetsOri/paquete_premium_202011.csv")
-
-  dataset   <- rbind( dataset1, dataset2 )
-  rm( dataset1, dataset2 )
-  gc()
+  dataset  <- fread( "./datasetsOri/paquete_premium.csv.gz")
 
   setorder(  dataset, numero_de_cliente, foto_mes )  #ordeno el dataset
 
@@ -710,6 +735,10 @@ correr_todo  <- function( palancas )
   if( palancas$maximo3 )  Maximos( dataset, cols_analiticas, 3 )
   if( palancas$maximo6 )  Maximos( dataset, cols_analiticas, 6 )
 
+  if(palancas$ratiomax3)  RatioMax(  dataset, cols_analiticas, 3) #La idea de Daiana Sparta
+  if(palancas$ratiomean6) RatioMean( dataset, cols_analiticas, 6) #Derivado de la idea de Daiana Sparta
+
+
   if( palancas$tendencia6 )  Tendencia( dataset, cols_analiticas)
 
 
@@ -723,7 +752,7 @@ correr_todo  <- function( palancas )
 
   #Grabo el dataset
   fwrite( dataset,
-          paste0( "./datasets/dataset_epic_simple_", palancas$version, ".csv.gz" ),
+          paste0( "./datasets/dataset_epic_", palancas$version, ".csv.gz" ),
           logical01 = TRUE,
           sep= "," )
 
@@ -736,6 +765,6 @@ correr_todo  <- function( palancas )
 correr_todo( palancas )
 
 
-#quit( save="no" )
+quit( save="no" )
 
 

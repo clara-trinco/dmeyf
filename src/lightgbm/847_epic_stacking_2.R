@@ -46,7 +46,7 @@ kexperimento  <- NA   #NA si se corre la primera vez, un valor concreto si es pa
 
 kscript         <- "847_epic_stacking"
 
-karch_dataset    <- "./datasets/dataset_stacking_v002.csv.gz"   #este dataset se genero en el script 812_dataset_epic.r
+karch_dataset    <- "./datasets/dataset_stacking_v011.csv.gz"   #este dataset se genero en el script 812_dataset_epic.r
 
 kapply_mes       <- c(202011)  #El mes donde debo aplicar el modelo
 
@@ -61,17 +61,36 @@ kgen_mes_hasta    <- 202009  #Obviamente, solo puedo entrenar hasta 202011
 kgen_mes_desde    <- 202009
 
 
-kBO_iter    <-  150   #cantidad de iteraciones de la Optimizacion Bayesiana
+kBO_iter    <-  250   #cantidad de iteraciones de la Optimizacion Bayesiana
 
 #Aqui se cargan los hiperparametros
-hs <- makeParamSet( 
-         makeNumericParam("learning_rate",    lower=    0.02 , upper=    0.1),
-         makeNumericParam("feature_fraction", lower=    0.1  , upper=    1.0),
-         makeIntegerParam("min_data_in_leaf", lower=  100L   , upper= 8000L),
-         makeIntegerParam("num_leaves",       lower=    8L   , upper= 1024L)
-        )
+# hs <- makeParamSet( 
+#          makeNumericParam("learning_rate",    lower=    0.02 , upper=    0.1),
+#          makeNumericParam("feature_fraction", lower=    0.1  , upper=    1.0),
+#          makeIntegerParam("min_data_in_leaf", lower=  100L   , upper= 8000L),
+#          makeIntegerParam("num_leaves",       lower=    8L   , upper= 1024L)
+#         )
 
-campos_malos  <- c()   #aqui se deben cargar todos los campos culpables del Data Drifting
+hs <- makeParamSet( 
+  makeNumericParam("learning_rate",      lower= 0.01 , upper=    0.1), #(modifique el 0,1 a 0,05 en upper)#0,013 - 0,016
+  makeNumericParam("feature_fraction",   lower= 0.1  , upper=    1.0), #(modifique el 0,2 a 0,1 en lower) #0,9999 en economista no lo pone default 1
+  makeIntegerParam("min_data_in_leaf",   lower= 100L    , upper= 8000L), # 100 - 2000
+  makeIntegerParam("num_leaves",         lower=16L   , upper= 1024L), # 20 en los pibes no estaba default 31
+  makeNumericParam("prob_corte",         lower= 0.020, upper=    0.055),
+  #AGREGADOS para que corra parametros antes en param_basicos
+  makeNumericParam("min_gain_to_split",  lower= 0, upper=    1),
+  makeNumericParam("lambda_l1",          lower= 0, upper=  200  ), # 0-19 - #Die (e/0-100) 0-17 (e/0-20) 0-5
+  makeNumericParam("lambda_l2",          lower= 0, upper=    200), #90-174        #Die  (e/30-150) 60-140 
+  makeIntegerParam("max_depth",          lower= 1L, upper=  8000L),
+  makeIntegerParam("max_bin",            lower= 2L, upper=    40L), #5-15-31
+  # AGREGADOS por leer articulo
+  makeNumericParam("bagging_fraction", lower= 0.5, upper=    1) ,# 0,5-1 default 
+  makeIntegerParam("bagging_freq", lower= 0, upper=  100) # default 0 moverlo a parametro fijo a un numero bajo
+)
+
+#campos_malos  <- c()   #aqui se deben cargar todos los campos culpables del Data Drifting
+
+campos_malos  <- c("internet","ctarjeta_visa_descuentos" , "mtarjeta_visa_descuentos" ,"ccajas_transacciones", "ctarjeta_master_descuentos" , "mtarjeta_master_descuentos" , "cextraccion_autoservicio" , "ccajas_otras" , "catm_trx" , "matm_other" , "tmobile_app" , "cmobile_app_trx" , "Master_Finiciomora" , "Master_mconsumosdolares" , "Master_madelantodolares" , "Master_cconsumos" , "Master_cadelantosefectivo" , "Visa_Finiciomora" , "Visa_msaldodolares" , "Visa_mpagado" , "Visa_mpagominimo")
 
 ksemilla_azar  <- 899971  #Aqui poner la propia semilla
 #------------------------------------------------------------------------------
@@ -288,22 +307,49 @@ EstimarGanancia_lightgbm  <- function( x )
 
   gc()
 
+  # param_basicos  <- list( objective= "binary",
+  #                         metric= "custom",
+  #                         first_metric_only= TRUE,
+  #                         boost_from_average= TRUE,
+  #                         feature_pre_filter= FALSE,
+  #                         verbosity= -100,
+  #                         seed= 999983,
+  #                         max_depth=  -1,         # -1 significa no limitar,  por ahora lo dejo fijo
+  #                         min_gain_to_split= 0.0, #por ahora, lo dejo fijo
+  #                         lambda_l1= 0.0,         #por ahora, lo dejo fijo
+  #                         lambda_l2= 0.0,         #por ahora, lo dejo fijo
+  #                         max_bin= 31,            #por ahora, lo dejo fijo
+  #                         num_iterations= 9999,   #un numero muy grande, lo limita early_stopping_rounds
+  #                         force_row_wise= TRUE    #para que los alumnos no se atemoricen con tantos warning
+  #                       )
+  
+  
   param_basicos  <- list( objective= "binary",
                           metric= "custom",
                           first_metric_only= TRUE,
                           boost_from_average= TRUE,
                           feature_pre_filter= FALSE,
                           verbosity= -100,
-                          seed= 999983,
-                          max_depth=  -1,         # -1 significa no limitar,  por ahora lo dejo fijo
-                          min_gain_to_split= 0.0, #por ahora, lo dejo fijo
-                          lambda_l1= 0.0,         #por ahora, lo dejo fijo
-                          lambda_l2= 0.0,         #por ahora, lo dejo fijo
-                          max_bin= 31,            #por ahora, lo dejo fijo
-                          num_iterations= 9999,   #un numero muy grande, lo limita early_stopping_rounds
+                          seed= 899971,  #999983
+                          #max_depth=  -1,         # -1 significa no limitar,  por ahora lo dejo fijo
+                          #min_gain_to_split= 0.0, #por ahora, lo dejo fijo
+                          #lambda_l1= 0.0,         #por ahora, lo dejo fijo
+                          #lambda_l2= 0.0,         #por ahora, lo dejo fijo
+                          #max_bin= 31,            #por ahora, lo dejo fijo
+                          num_iterations= 9999,   #un numero muy grande, lo limita early_stopping_rounds #430-499
                           force_row_wise= TRUE    #para que los alumnos no se atemoricen con tantos warning
-                        )
+  )
 
+  #dejo los datos en el formato que necesita LightGBM
+  #uso el weight como un truco ESPANTOSO para saber la clase real
+  dtrain  <- lgb.Dataset( data=    data.matrix(  dataset[ entrenamiento==1 , campos_buenos, with=FALSE]),
+                          label=   dataset[ entrenamiento==1, clase01],
+                          weight=  dataset[ entrenamiento==1, ifelse(clase_ternaria=="CONTINUA", 1/ktrain_subsampling,
+                                                                     ifelse( clase_ternaria=="BAJA+2", 1, 1.0000001))] ,
+                          free_raw_data= TRUE
+  )
+  
+  
   #el parametro discolo, que depende de otro
   param_variable  <- list(  early_stopping_rounds= as.integer(50 + 1/x$learning_rate) )
 
@@ -311,7 +357,7 @@ EstimarGanancia_lightgbm  <- function( x )
 
   VPOS_CORTE  <<- c()
   kfolds  <- 5
-  set.seed( 999983 )
+  set.seed( 899971 )
   modelocv  <- lgb.cv( data= dtrain,
                        eval= fganancia_lgbm_meseta,
                        stratified= TRUE, #sobre el cross validation

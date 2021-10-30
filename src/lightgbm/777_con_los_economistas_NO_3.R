@@ -13,8 +13,8 @@ require("lightgbm")
 #setwd("~/buckets/b1/crudoB" )  #establezco la carpeta donde voy a trabajar
 setwd("/Users/clara/Documents/00-Posgrado/4_DM_Eco_y_Finanzas/")
 #cargo el dataset
-dataset  <- fread("./datasetsOri/paquete_premium_202009.csv")
-
+dataset  <- fread("./datasets/dataset_epic_simple_v009.csv.gz")
+dataset <- dataset[dataset$foto_mes=="202009"]
 #creo la clase_binaria donde en la misma bolsa estan los BAJA+1 y BAJA+2
 dataset[ , clase01:= ifelse( clase_ternaria=="CONTINUA", 0, 1 ) ]
 
@@ -33,8 +33,8 @@ dtrain  <- lgb.Dataset( data=  data.matrix(  dataset[ , campos_buenos, with=FALS
 
 params= list( objective= "binary",
               max_bin= 5,   # https://www.youtube.com/watch?v=0mtctl8ba4g
-              min_data_in_leaf= 100,
-              num_leaves= 20,
+              min_data_in_leaf= 1000,
+              num_leaves= 500,
               learning_rate= 0.013,
               num_iterations = 430,
               seed= 999983)
@@ -44,7 +44,9 @@ modelo  <- lightgbm( data= dtrain,
 
 
 #cargo el dataset donde aplico el modelo
-dapply  <- fread("./datasetsOri/paquete_premium_202011.csv")
+#dapply  <- fread("./datasetsOri/paquete_premium_202011.csv")
+dapply  <- fread("./datasets/dataset_epic_simple_v009.csv.gz")
+dapply <- dapply[dapply$foto_mes=="202011"]
 
 #aplico el modelo a los datos nuevos, dapply
 prediccion  <- predict( modelo,  data.matrix( dapply[  , campos_buenos, with=FALSE])) ##predict sobre noviembre
@@ -52,15 +54,13 @@ prediccion  <- predict( modelo,  data.matrix( dapply[  , campos_buenos, with=FAL
 dataset_w_pred <- cbind(dapply,prediccion)
 
 
-#la probabilidad de corte ya no es 0.025
-entrega_nov  <- as.data.table( list( "numero_de_cliente"= dapply[  , numero_de_cliente],
-                                 "foto_mes" = dapply[  , foto_mes],
-                                 "Predicted"= as.numeric(prediccion) ) ) #genero la salida
+entrega  <- as.data.table( list( "numero_de_cliente"= dapply[  , numero_de_cliente],
+                                 "Predicted"= as.numeric(prediccion > 0.038) ) ) #genero la salida
 
-modelito_777 <- rbind(ds_entrega,entrega_nov)
-
-fwrite( modelito_777,
-        file="./modelitos/E777_modelitos.csv.gz")
+#genero el archivo para Kaggle
+fwrite( entrega, 
+        file= "./kaggle/con_los_economistas_NO_3.csv",
+        sep=  "," )
 
 
 

@@ -10,12 +10,13 @@ gc()             #garbage collection
 
 require("data.table")
 
-setwd("~/buckets/b1/crudoB/" )
+#setwd("~/buckets/b1/crudoB/" )
+setwd("/Users/clara/Documents/00-Posgrado/4_DM_Eco_y_Finanzas/")
 
-version  <- "v001"  #cambiar cada vez, asi se tiene versionado del dataset
+version  <- "v012"  #cambiar cada vez, asi se tiene versionado del dataset
 
-dataset  <- fread( "./datasets/dataset_epic_simple_v007.csv.gz" )
-dataset  <- copy(  dataset[  , c("numero_de_cliente","foto_mes","clase_ternaria"),  with=FALSE] )
+dataset  <- fread( "./datasets/dataset_epic_simple_v009.csv.gz" )
+dataset  <- copy(  dataset[  , c("numero_de_cliente","foto_mes","clase_ternaria","cr_eg_total","cr_consumo_tarjeta", "ctrx_quarter", "cr_ing_total", "cr_eg_total_cr_cant_prod", "ctrx_quarter_cr_consumo_tarjeta_1", "cr_eg_total_cr_consumo_tarjeta_1", "cr_consumo_tarjeta_cr_ing_total_1", "cr_eg_total_ctrx_quarter_1"),  with=FALSE] )
 gc()
 
 
@@ -28,6 +29,8 @@ for( archivo  in archivos )
   darchivo  <- fread( paste0("./modelitos/", archivo ) )
   dataset  <- merge( dataset, darchivo, by=c("numero_de_cliente","foto_mes") )
 }
+
+#"cr_eg_total","cr_consumo_tarjeta", "ctrx_quarter", "cr_ing_total", "cr_consumo_tarjeta", "cr_eg_total_cr_cant_prod"
 
 gc()
 

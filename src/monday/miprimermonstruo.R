@@ -19,6 +19,8 @@ ds <- fread(ds_fe, showProgress = FALSE)
 clase_binaria <- ifelse(ds$clase_ternaria == "BAJA+2", 1, 0)
 ds$clase_ternaria <- NULL
 
+
+
 ######## 
 # Empezamos con el stacking
 ########
