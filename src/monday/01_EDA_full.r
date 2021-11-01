@@ -55,9 +55,9 @@ for (month in months){
   
   dataset_month <- dataset[dataset$foto_mes==month] #aca voy selecionando el mes para hacerlo
   
-  fname <- paste0(month, "_EDA",".Rmd")
+  fname <- paste0(month, "_EDA_pdf")
   
-  makeDataReport(dataset_month,render = FALSE, file = fname, replace = TRUE) 
+  makeDataReport(dataset_month,output="pdf", render = TRUE, file = fname, replace = TRUE) 
   
 }
   
