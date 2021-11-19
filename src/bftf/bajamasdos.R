@@ -18,10 +18,14 @@ require("mlrMBO")
 setwd("/Users/clara/Documents/00-Posgrado/4_DM_Eco_y_Finanzas/")
 
 
-karch_dataset    <- "./datasets/datasets-dataset_baja.csv.gz" 
+karch_dataset    <- "./datasets/datasets-dataset_base_bajas1.csv.gz" 
 
 dataset <- fread(karch_dataset)
-colnames(dataset[,1001:1500])
+
+dataset[,.N,clase_ternaria]
+
+dataset_bajas2 <-dataset[dataset$clase_ternaria=="BAJA+2"]
+dataset_bajas1 <-dataset[dataset$clase_ternaria=="BAJA+1"]
 
 dataset_modelito <-"./datasets/modelitos-E1007_modelitos.csv.gz" 
 dataset_modelito <- fread(dataset_modelito)

@@ -18,7 +18,7 @@ require("primes")  #para generar semillas
 directory.root <- "~/buckets/b1/"
 setwd( directory.root )
 
-kexperimento  <- 5020
+kexperimento  <- 5025
 
 kscript         <- "982_epic_5020_semillas"
 karch_dataset   <- "./datasets/dataset_epic_v952_dataset_011.csv.gz" #el dataset que voy a utilizar
@@ -28,7 +28,7 @@ ktest_mes_desde  <- 202011
 
 kgen_mes_hasta   <- 202009  #hasta donde voy a entrenar
 kgen_mes_desde   <- 201801  #desde donde voy a entrenar (venia con 201901)
-kgen_meses_malos <- 202006  #el mes que voy a eliminar del entreanamiento
+kgen_meses_malos <- c(202003,202004,202005,202006)  #el mes que voy a eliminar del entreanamiento
 
 kgen_subsampling <- 1.0     #esto es NO hacer undersampling
 
@@ -40,15 +40,15 @@ campos_malos  <- c("Master_Finiciomora", "Visa_Finiciomora", "ccajas_transaccion
 get_experimento  <- function()
 {
   if( !file.exists( "./maestro.yaml" ) )  cat( file="./maestro.yaml", "experimento: 1000" )
-
+  
   exp  <- read_yaml( "./maestro.yaml" )
   experimento_actual  <- exp$experimento
-
+  
   exp$experimento  <- as.integer(exp$experimento + 1)
   Sys.chmod( "./maestro.yaml", mode = "0644", use_umask = TRUE)
   write_yaml( exp, "./maestro.yaml" )
   Sys.chmod( "./maestro.yaml", mode = "0444", use_umask = TRUE) #dejo el archivo readonly
-
+  
   return( experimento_actual )
 }
 #------------------------------------------------------------------------------
@@ -77,10 +77,10 @@ dataset[ , clase01:= ifelse( clase_ternaria=="CONTINUA", 0, 1 ) ]
 vector_azar  <- runif( nrow(dataset) )
 
 dataset[    foto_mes>= kgen_mes_desde  &
-            foto_mes<= kgen_mes_hasta  & 
-            !( foto_mes %in% kgen_meses_malos ) &
-            ( clase01==1 | vector_azar < kgen_subsampling ),
-          generacion:= 1L ]  #donde genero el modelo
+              foto_mes<= kgen_mes_hasta  & 
+              !( foto_mes %in% kgen_meses_malos ) &
+              ( clase01==1 | vector_azar < kgen_subsampling ),
+            generacion:= 1L ]  #donde genero el modelo
 
 #los campos que se van a utilizar
 campos_buenos  <- setdiff( colnames(dataset), 
@@ -90,7 +90,7 @@ campos_buenos  <- setdiff( colnames(dataset),
 dtrain  <- lgb.Dataset( data=    data.matrix(  dataset[ generacion==1 , campos_buenos, with=FALSE]),
                         label=   dataset[ generacion==1, clase01],
                         free_raw_data= TRUE
-                      )
+)
 
 rm( "dataset" )   #libero memoria para el dataset
 gc()              #garbage collection
@@ -108,7 +108,7 @@ param_basicos  <- list( objective= "binary",
                         #lambda_l2= 0.0,         #por ahora, lo dejo fijo
                         max_bin= 31,            #por ahora, lo dejo fijo
                         force_row_wise= TRUE    #para que los alumnos no se atemoricen con tantos warning
-                       )
+)
 
 
 #Estos hiperparametros salieron de la optimizacion bayesiana del script 962
@@ -123,7 +123,7 @@ param_ganadores  <- list( "learning_rate"= 0.093725226173643,
                           #"max_depth"= -1 ,
                           "lambda_l1"= 25,9654545855243, 
                           "lambda_l2"= 57,2981114496477
-                        )
+)
 
 #junto ambas listas de parametros en una sola
 param_completo  <- c( param_basicos, param_ganadores )
@@ -136,7 +136,7 @@ tb_resultados  <- data.table( semilla= integer(),
                               meseta= integer(),
                               ganancia= numeric() )
 
-set.seed( 999979  )   #dejo fija esta semilla
+set.seed( 999983  )   #dejo fija esta semilla
 CANTIDAD_SEMILLAS  <- 20
 
 #me genero un vector de semilla buscando numeros primos al azar
@@ -149,46 +149,46 @@ for(  semillita  in  ksemillas )   #itero por las semillas
 {
   gc()
   param_completo$seed  <- semillita   #asigno la semilla a esta corrida
-
+  
   set.seed( semillita )
   #genero el modelo, los hiperparametros son siempre los mismos, la semilla CAMBIA
   modelo  <- lgb.train( data= dtrain,
                         param= param_completo )
-
+  
   #aplico el modelo a los datos que elegi para testing  202011
   prediccion  <- predict( modelo, data.matrix( dtest[ , campos_buenos, with=FALSE]) )
-
+  
   #creo una tabla con las probabilidades y la ganancia de ese registro
   tb_meseta  <- as.data.table( list( "prob"=prediccion,  "gan"=  dtest[ , ifelse( clase_ternaria=="BAJA+2", 48750, - 1250)] ))
   setorder( tb_meseta,  -prob )
-
+  
   #calculo la ganancia  para el ratio de corte original
   pos_corte  <- as.integer( nrow(dtest)* param_completo$ratio_corte )
   ganancia   <- tb_meseta[  1:pos_corte, sum(gan) ]
-
+  
   tb_resultados  <- rbind( tb_resultados, list( semillita, 
                                                 kgen_subsampling,
                                                 1,  #SI es el punto oficial
                                                 pos_corte, 
                                                 ganancia ) )  #agrego la ganancia estandar
-
-
+  
+  
   for( punto_meseta  in seq( 5000, 15000, by=500 ) )  #itero desde 5000 a 15000 , de a 500 
   {
     ganancia  <-  tb_meseta[ 1:punto_meseta, sum(gan) ]   #calculo la ganancia de los mejores punto_meseta registros
-
+    
     tb_resultados  <- rbind( tb_resultados, list( semillita, 
                                                   kgen_subsampling, 
                                                   0,  #No es el punto oficial
                                                   punto_meseta, 
                                                   ganancia ) )  #agrego la ganancia estandar
   }
-
+  
   #en cada iteracion GRABO
   fwrite(  tb_resultados,
            file= kresultados,
            sep= "\t" )
-
+  
 }
 
 #apagado de la maquina virtual, pero NO se borra

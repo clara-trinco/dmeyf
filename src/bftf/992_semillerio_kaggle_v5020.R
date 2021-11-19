@@ -1,7 +1,7 @@
 #Necesita para correr en Google Cloud
 #64 GB de memoria RAM
 #256 GB de espacio en el disco local
-#8 vCPU
+#10 vCPU
 
 #limpio la memoria
 rm( list=ls() )  #remove all objects
@@ -20,15 +20,16 @@ setwd( directory.root )
 
 kexperimento  <- 5020
 
-kscript         <- "982_epic_5020_semillas"
-karch_dataset   <- "./datasets/dataset_epic_v952_dataset_011.csv.gz" #el dataset que voy a utilizar
+kscript         <- "992_epic_5020"
+karch_dataset   <- "./datasets/dataset_epic_v952_dataset_011.csv.gz"#el dataset que voy a utilizar
+karch_realidad  <- "./datasets/realidad_202101.csv"  #el dataset que voy a utilizar
 
-ktest_mes_hasta  <- 202011  #Esto es lo que uso para testing
-ktest_mes_desde  <- 202011
+ktest_mes_hasta  <- 202101  #Esto es lo que uso para testing
+ktest_mes_desde  <- 202101
 
-kgen_mes_hasta   <- 202009  #hasta donde voy a entrenar
-kgen_mes_desde   <- 201801  #desde donde voy a entrenar (venia con 201901)
-kgen_meses_malos <- 202006  #el mes que voy a eliminar del entreanamiento
+kgen_mes_hasta   <- 202011  #hasta donde voy a entrenar
+kgen_mes_desde   <- 201901  #desde donde voy a entrenar
+kgen_meses_malos <- c(202003,202004,202005,202006)  #el mes que voy a eliminar del entreanamiento
 
 kgen_subsampling <- 1.0     #esto es NO hacer undersampling
 
@@ -67,6 +68,10 @@ dataset  <- fread(karch_dataset)
 
 #cargo los datos donde voy a aplicar el modelo
 dtest  <- copy( dataset[ foto_mes>= ktest_mes_desde &  foto_mes<= ktest_mes_hasta,  ] )
+drealidad  <- fread(karch_realidad)
+dtest[ drealidad, on="numero_de_cliente", Usage := i.Usage ]
+dtest[ drealidad, on="numero_de_cliente", Predicted := i.Predicted ]
+dtest[  , gan :=  ifelse( Predicted==1, 48750, -1250 ) ]
 
 
 #creo la clase_binaria2   1={ BAJA+2,BAJA+1}  0={CONTINUA}
@@ -108,7 +113,7 @@ param_basicos  <- list( objective= "binary",
                         #lambda_l2= 0.0,         #por ahora, lo dejo fijo
                         max_bin= 31,            #por ahora, lo dejo fijo
                         force_row_wise= TRUE    #para que los alumnos no se atemoricen con tantos warning
-                       )
+)
 
 
 #Estos hiperparametros salieron de la optimizacion bayesiana del script 962
@@ -123,7 +128,7 @@ param_ganadores  <- list( "learning_rate"= 0.093725226173643,
                           #"max_depth"= -1 ,
                           "lambda_l1"= 25,9654545855243, 
                           "lambda_l2"= 57,2981114496477
-                        )
+)
 
 #junto ambas listas de parametros en una sola
 param_completo  <- c( param_basicos, param_ganadores )
@@ -134,7 +139,9 @@ tb_resultados  <- data.table( semilla= integer(),
                               subsamping= numeric(),
                               oficial= integer(),
                               meseta= integer(),
-                              ganancia= numeric() )
+                              ganancia_Public= numeric(),
+                              ganancia_Private= numeric()
+                              )
 
 set.seed( 999979  )   #dejo fija esta semilla
 CANTIDAD_SEMILLAS  <- 20
@@ -143,7 +150,6 @@ CANTIDAD_SEMILLAS  <- 20
 primos  <- generate_primes(min=100000, max=1000000)  #genero TODOS los numeros primos entre 100k y 1M
 ksemillas  <- sample(primos)[ 1:CANTIDAD_SEMILLAS ]   #me quedo con CANTIDAD_SEMILLAS primos al azar
 ksemillas  <- c( 999979, ksemillas )
-
 
 for(  semillita  in  ksemillas )   #itero por las semillas
 {
@@ -159,29 +165,37 @@ for(  semillita  in  ksemillas )   #itero por las semillas
   prediccion  <- predict( modelo, data.matrix( dtest[ , campos_buenos, with=FALSE]) )
 
   #creo una tabla con las probabilidades y la ganancia de ese registro
-  tb_meseta  <- as.data.table( list( "prob"=prediccion,  "gan"=  dtest[ , ifelse( clase_ternaria=="BAJA+2", 48750, - 1250)] ))
+  tb_meseta  <- as.data.table( list( "prob"=prediccion,  
+                                     "Usage"=  dtest[ , Usage],
+                                     "gan"=  dtest[ , gan] ) )
+
   setorder( tb_meseta,  -prob )
 
   #calculo la ganancia  para el ratio de corte original
   pos_corte  <- as.integer( nrow(dtest)* param_completo$ratio_corte )
-  ganancia   <- tb_meseta[  1:pos_corte, sum(gan) ]
+
+  ganancia_Public   <- tb_meseta[  1:pos_corte, sum(ifelse( Usage=="Public",  gan, 0)) ] / 0.3
+  ganancia_Private  <- tb_meseta[  1:pos_corte, sum(ifelse( Usage=="Private", gan, 0)) ] / 0.7
 
   tb_resultados  <- rbind( tb_resultados, list( semillita, 
                                                 kgen_subsampling,
                                                 1,  #SI es el punto oficial
                                                 pos_corte, 
-                                                ganancia ) )  #agrego la ganancia estandar
+                                                ganancia_Public,
+                                                ganancia_Private) )  #agrego la ganancia estandar
 
 
-  for( punto_meseta  in seq( 5000, 15000, by=500 ) )  #itero desde 5000 a 15000 , de a 500 
+  for( punto_meseta  in seq( 5000, 20000, by=500 ) )  #itero desde 5000 a 15000 , de a 500 
   {
-    ganancia  <-  tb_meseta[ 1:punto_meseta, sum(gan) ]   #calculo la ganancia de los mejores punto_meseta registros
+    ganancia_Public   <- tb_meseta[  1:punto_meseta, sum(ifelse( Usage=="Public",  gan, 0)) ] / 0.3
+    ganancia_Private  <- tb_meseta[  1:punto_meseta, sum(ifelse( Usage=="Private", gan, 0)) ] / 0.7
 
     tb_resultados  <- rbind( tb_resultados, list( semillita, 
                                                   kgen_subsampling, 
                                                   0,  #No es el punto oficial
                                                   punto_meseta, 
-                                                  ganancia ) )  #agrego la ganancia estandar
+                                                  ganancia_Public,
+                                                  ganancia_Private) )  #agrego la ganancia estandar
   }
 
   #en cada iteracion GRABO
@@ -191,12 +205,3 @@ for(  semillita  in  ksemillas )   #itero por las semillas
 
 }
 
-#apagado de la maquina virtual, pero NO se borra
-system( "sleep 10  &&  sudo shutdown -h now", wait=FALSE)
-
-#suicidio,  elimina la maquina virtual directamente
-system( "sleep 10  && 
-        export NAME=$(curl -X GET http://metadata.google.internal/computeMetadata/v1/instance/name -H 'Metadata-Flavor: Google') &&
-        export ZONE=$(curl -X GET http://metadata.google.internal/computeMetadata/v1/instance/zone -H 'Metadata-Flavor: Google') &&
-        gcloud --quiet compute instances delete $NAME --zone=$ZONE",
-        wait=FALSE )
