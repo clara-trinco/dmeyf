@@ -369,16 +369,16 @@ AgregarVariables  <- function( dataset )
   dataset[ , cr_ing_total_ctarjeta_visa_transacciones:= ctarjeta_visa_transacciones/cr_ing_total  ]
   
   
-  dataset[ , cr_eg_total_ctrx_quarter:= cr_eg_total * ctrx_quarter ]
-  dataset[ , cr_eg_total_cr_cant_prod:= cr_eg_total * cr_cant_prod ]
-  dataset[ , ctrx_quarter_cr_consumo_tarjeta:= ctrx_quarter * cr_consumo_tarjeta ]
-  dataset[ , cr_consumo_tarjeta_cr_cant_prod:= cr_consumo_tarjeta * cr_cant_prod ]
-  dataset[ , cr_eg_total_cr_consumo_tarjeta:= cr_eg_total * cr_consumo_tarjeta ]
-  dataset[ , ctrx_quarter_cr_ing_total:= ctrx_quarter * cr_ing_total ]
-  dataset[ , cr_consumo_tarjeta_cr_ing_total:= cr_consumo_tarjeta * cr_ing_total ]
-  dataset[ , cr_ing_total_cr_gastos:= cr_ing_total * cr_gastos]
-  dataset[ , ctrx_quarter_cr_gastos:= ctrx_quarter * cr_gastos ]
-  dataset[ , cr_ing_total_ctarjeta_visa_transacciones:= cr_ing_total * ctarjeta_visa_transacciones ]
+  dataset[ , cr_eg_total_ctrx_quarter2:= cr_eg_total * ctrx_quarter ]
+  dataset[ , cr_eg_total_cr_cant_prod2:= cr_eg_total * cr_cant_prod ]
+  dataset[ , ctrx_quarter_cr_consumo_tarjeta2:= ctrx_quarter * cr_consumo_tarjeta ]
+  dataset[ , cr_consumo_tarjeta_cr_cant_prod2:= cr_consumo_tarjeta * cr_cant_prod ]
+  dataset[ , cr_eg_total_cr_consumo_tarjeta2:= cr_eg_total * cr_consumo_tarjeta ]
+  dataset[ , ctrx_quarter_cr_ing_total2:= ctrx_quarter * cr_ing_total ]
+  dataset[ , cr_consumo_tarjeta_cr_ing_total2:= cr_consumo_tarjeta * cr_ing_total ]
+  dataset[ , cr_ing_total_cr_gastos2:= cr_ing_total * cr_gastos]
+  dataset[ , ctrx_quarter_cr_gastos2:= ctrx_quarter * cr_gastos ]
+  dataset[ , cr_ing_total_ctarjeta_visa_transacciones2:= cr_ing_total * ctarjeta_visa_transacciones ]
   
   
   #valvula de seguridad para evitar valores infinitos
