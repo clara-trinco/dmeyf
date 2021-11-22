@@ -12,27 +12,41 @@ dataset <-fread(karch_dataset )
 #creo clase01 
 dataset[ , clase01:= ifelse( clase_ternaria=="CONTINUA", 0, 1 ) ]
 
-dataset_non_na <- dataset[complete.cases(dataset),]
+##paso los NaN a 0 , decision polemica si las hay
+nans      <- lapply(names(dataset),function(.name) dataset[ , sum(is.nan(get(.name)))])
+nans_qty  <- sum( unlist( nans) )
 
-f=function(x){
-  x<-as.numeric(as.character(x)) #first convert each column into numeric if it is from factor
-  x[is.na(x)] =median(x, na.rm=TRUE) #convert the item with NA to median value from the column
-  x #display the column
+if( nans_qty > 0 )
+{
+  cat( "ATENCION, hay", nans_qty, "valores NaN 0/0 en tu dataset. Seran pasados arbitrariamente a 0\n" )
+  cat( "Si no te gusta la decision, modifica a gusto el programa!\n\n")
+  dataset[mapply(is.nan, dataset)] <- 0
 }
 
-ss=data.frame(apply(dataset,2,f))
-df <- as.data.frame(ss)
+a <- dataset[1:10,1:10]
+a[1,5]<-NaN
+print(a)
 
-library("tidyr")
-data4 <- dataset[, -c("clase_ternaria")] %>% drop_na() 
 
-data2 <- dataset[complete.cases(dataset), ]  
-df <- na.omit(dataset[, -c("clase_ternaria","clase01")])
+b <- c(1, Inf, NA, NaN)
+b[which(!is.finite(b))] <- 0
 
-dataset_train  <- dataset[dataset$foto_mes==202009]
+a[2,5]<- NA
+a[3,5]<- Inf
+
+a
+df<- do.call(data.frame,  
+                   lapply(dataset,
+                          function(x) replace(x, !is.finite(x), 0)))
+
+data.frame(df)
+
+df1 <- data.frame(matrix(unlist(df), nrow=length(df), byrow=TRUE))
+
+dataset_train  <- df[df$foto_mes==202009]
 dataset_test  <- df[df$foto_mes==202011]
 
 
 
 
-model <- glm(clase01~cr_consumo_tarjeta+mcaja_ahorro+cr_ah_pay+ctrx_quarter+mcuenta_corriente+cr_pasivos+cr_ing_total+ctarjeta_visa_transacciones+cr_totsaldo_payroll,family=binomial(link='logit'), options(na.action = "na.exclude") ,data=dataset_train)
+model <- glm(clase01~cr_consumo_tarjeta+mcaja_ahorro+cr_ah_pay+ctrx_quarter+mcuenta_corriente+cr_pasivos+cr_ing_total+ctarjeta_visa_transacciones+cr_totsaldo_payroll,family=binomial(link='logit'), data=dataset_train)
